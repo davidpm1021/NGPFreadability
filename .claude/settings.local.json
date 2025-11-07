@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b *.py *.js *.ts *.json *.yml *.yaml 2)",
+      "Bash(nul)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial project setup with planning documents\n\nAdd comprehensive project documentation:\n- CLAUDE.md: Technical guidance for future Claude Code instances\n- PRD.md: Complete product requirements and specifications\n- SPRINTS.md: 7-sprint plan from foundation to MVP\n\nProject establishes NGPF Article Readability Analyzer - internal tool\nto analyze readability metrics (Flesch-Kincaid, SMOG, Coleman-Liau, ARI)\nfor bulk article URLs.\n\nTech stack: Python/FastAPI backend, React/TypeScript frontend\nTimeline: 11.5 days to MVP with TDD approach and 80% coverage requirement\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(python -m venv:*)",
+      "Bash(npm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
