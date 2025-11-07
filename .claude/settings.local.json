@@ -9,7 +9,8 @@
       "Bash(npm install:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(python -m venv:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
