@@ -219,12 +219,30 @@ After baseline is established:
 - Edge case handling (empty, short, long, no punctuation)
 - Complete documentation with examples and use cases
 
-**Next Steps (Sprint 3):**
-1. Install Python 3.11+ to run and validate all tests
-2. Create `/api/analyze-urls` endpoint
-3. Integrate extraction + readability services
-4. Implement async batch processing for URLs
-5. Add request/response validation
+**Sprint 3 - API Endpoint Integration (✅ Complete):**
+- `/api/analyze-urls` endpoint fully implemented
+- Complete pipeline: URL → extract → analyze → response
+- process_url() function integrating extraction + readability
+- Request/response Pydantic schemas with validation
+- UrlAnalysisRequest (1-200 URLs)
+- ArticleAnalysis (complete result per URL)
+- AnalysisSummary (total, successful, failed, avg grade)
+- BatchAnalysisResponse (results + summary)
+- Comprehensive API tests (40+ test cases)
+- Single URL, batch, partial failures, validation errors
+- Summary calculation tests
+- Sequential processing (handles 100+ URLs)
+- Auto-generated OpenAPI/Swagger documentation
+- Complete API documentation with examples
+- Python, JavaScript, curl examples
+- Error handling and troubleshooting guide
+
+**Next Steps (Sprint 4):**
+1. Install Python 3.11+ to run and validate all backend tests
+2. Build frontend UI components (UrlInput, ResultsTable, etc.)
+3. Integrate frontend with backend API
+4. Implement CSV export functionality
+5. End-to-end testing
 
 
 
