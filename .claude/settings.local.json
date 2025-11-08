@@ -16,7 +16,9 @@
       "Bash(./venv/Scripts/pip install:*)",
       "Bash(./venv/Scripts/uvicorn:*)",
       "Bash(./venv/Scripts/python:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(./venv/Scripts/pytest app/tests/ -v --tb=short)",
+      "Bash(./venv/Scripts/pytest:*)"
     ],
     "deny": [],
     "ask": []
