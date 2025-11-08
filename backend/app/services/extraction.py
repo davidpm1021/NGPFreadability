@@ -338,7 +338,7 @@ def extract_with_trafilatura(
 def extract_with_readability(
     url: str,
     timeout: Optional[int] = None
-) -> Optional[str]:
+) -> tuple[Optional[str], Optional[str]]:
     """
     Extract text from URL using readability-lxml as fallback.
 
@@ -347,13 +347,26 @@ def extract_with_readability(
         timeout: Optional timeout in seconds
 
     Returns:
-        Extracted text or None if extraction fails
+        Tuple of (extracted_text, error_message)
     """
     try:
         timeout = timeout or settings.extraction_timeout
 
         # Fetch the URL
         response = requests.get(url, timeout=timeout)
+
+        # Check for specific HTTP error codes
+        if response.status_code == 403:
+            return None, "Access denied - site may be blocking scrapers"
+        elif response.status_code == 402:
+            return None, "Paywall detected - subscription required"
+        elif response.status_code == 404:
+            return None, "Page not found (404)"
+        elif response.status_code == 429:
+            return None, "Rate limited - too many requests"
+        elif response.status_code >= 500:
+            return None, f"Server error ({response.status_code})"
+
         response.raise_for_status()
 
         # Extract with readability
@@ -369,14 +382,27 @@ def extract_with_readability(
 
         if text:
             logger.info(f"Readability: Successfully extracted from {url}")
-            return text
+            return text, None
         else:
             logger.warning(f"Readability: No text extracted from {url}")
-            return None
+            return None, "No text content found - page may require JavaScript"
 
+    except requests.exceptions.Timeout:
+        return None, "Request timed out - server too slow"
+    except requests.exceptions.SSLError:
+        return None, "SSL/TLS error - certificate issue"
+    except requests.exceptions.ConnectionError:
+        return None, "Connection failed - check URL or network"
     except Exception as e:
         logger.error(f"Readability: Error extracting {url}: {e}")
-        return None
+        error_str = str(e).lower()
+        if 'ssl' in error_str or 'certificate' in error_str:
+            return None, "SSL certificate error"
+        elif 'timeout' in error_str:
+            return None, "Request timed out"
+        elif 'connection' in error_str:
+            return None, "Connection refused or failed"
+        return None, f"Extraction error: {type(e).__name__}"
 
 
 def extract_text(
@@ -433,7 +459,7 @@ def extract_text(
 
     # Fallback to readability-lxml
     logger.info(f"Falling back to readability-lxml for {url}")
-    text = extract_with_readability(url, timeout)
+    text, error = extract_with_readability(url, timeout)
     if text:
         cleaned_text = clean_extracted_text(text)
         return ExtractionResult(
@@ -443,11 +469,18 @@ def extract_text(
             extraction_method="readability-lxml"
         )
 
-    # Both methods failed
+    # Both methods failed - use specific error from readability if available
+    if error:
+        return ExtractionResult(
+            url=url,
+            success=False,
+            error=error
+        )
+
     return ExtractionResult(
         url=url,
         success=False,
-        error="Failed to extract text with both Trafilatura and readability-lxml"
+        error="No text content found - extraction failed"
     )
 
 
