@@ -135,11 +135,18 @@ npm test
 - Infographic platforms (infogram.com, datawrapper.de, tableau.com)
 - Trailing punctuation is automatically removed from URLs ()[].,;
 
-**URLs that show as "Failed" in results:**
-- Homepages (no path or just /)
-- Sites that block scraping
-- Paywalled content
-- Actual extraction failures
+**URLs that show as "Failed" in results with specific error messages:**
+- **Homepages:** "Homepage URLs cannot be analyzed - please use article URLs"
+- **Access denied (403):** "Access denied - site may be blocking scrapers"
+- **Paywall (402):** "Paywall detected - subscription required"
+- **Not found (404):** "Page not found (404)"
+- **Rate limited (429):** "Rate limited - too many requests"
+- **Server errors (5xx):** "Server error (status code)"
+- **Timeout:** "Request timed out - server too slow"
+- **SSL issues:** "SSL/TLS error - certificate issue"
+- **Connection issues:** "Connection failed - check URL or network"
+- **No content:** "No text content found - page may require JavaScript"
+- **Generic:** "Extraction error: ErrorType"
 
 ### Text Extraction
 - **Trafilatura** is primary (confirmed 95.8% accuracy)
