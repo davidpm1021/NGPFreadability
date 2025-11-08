@@ -21,8 +21,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Frontend (React):**
 - React + TypeScript
 - Axios - API calls
-- Tailwind CSS - Styling
+- Tailwind CSS - Styling (with dark mode)
 - PapaParse - CSV handling
+- localStorage - Client-side caching and theme persistence
 
 ## Development Commands
 
@@ -59,13 +60,18 @@ npm test
 ## Architecture
 
 ### Request Flow
-1. **Frontend** → User pastes URLs (one per line), validates format, sends to backend
-2. **Backend API** (`POST /api/analyze-urls`) → Receives URL list
-3. **Async Processing** → Parallel fetching with aiohttp for speed (<2s per article)
-4. **Text Extraction** → Trafilatura primary, readability-lxml fallback
-5. **Readability Analysis** → textstat calculates 5 metrics per article
-6. **Response** → JSON with metrics, statistics, summary, and failed URLs
-7. **Frontend Display** → Table view + CSV export
+1. **Frontend** → User pastes URLs (one per line), validates format
+2. **URL Filtering** → Silently removes YouTube, EdPuzzle, Instagram, images, infographics
+3. **Cache Check** → Checks localStorage for previously analyzed URLs (7-day expiry)
+4. **Backend API** (`POST /api/analyze-urls`) → Sends only uncached URLs
+5. **Backend Filtering** → Double-checks and filters non-article URLs
+6. **Async Processing** → Parallel fetching with aiohttp for speed (<2s per article)
+7. **Text Extraction** → Trafilatura primary, readability-lxml fallback
+8. **Readability Analysis** → textstat calculates 5 metrics per article
+9. **Response** → JSON with metrics, statistics, summary, and failed URLs
+10. **Cache Update** → Stores new results in localStorage
+11. **Result Merging** → Combines cached + new results
+12. **Frontend Display** → Table view + CSV export with dark mode support
 
 ### Key Backend Components
 
@@ -120,11 +126,35 @@ npm test
 
 ## Important Implementation Details
 
+### URL Filtering (Silent)
+**URLs that are automatically skipped (not shown in results):**
+- YouTube videos (all formats: youtube.com, youtu.be)
+- EdPuzzle videos (edpuzzle.com)
+- Instagram posts (instagram.com)
+- Direct image files (.png, .jpg, .jpeg, .gif, .webp, .svg, .bmp)
+- Infographic platforms (infogram.com, datawrapper.de, tableau.com)
+- Trailing punctuation is automatically removed from URLs ()[].,;
+
+**URLs that show as "Failed" in results:**
+- Homepages (no path or just /)
+- Sites that block scraping
+- Paywalled content
+- Actual extraction failures
+
 ### Text Extraction
 - **Trafilatura** is primary (confirmed 95.8% accuracy)
 - Use `extract(downloaded, include_comments=False, include_tables=False, no_fallback=False)`
 - **No JavaScript rendering needed** - confirmed by user
 - Fallback to readability-lxml only if Trafilatura fails
+- URL cleaning removes trailing punctuation before extraction
+
+### Client-Side Caching
+- **Storage:** localStorage with key `ngpf-readability-cache`
+- **Expiry:** 7 days from analysis
+- **Version:** 1.0 (clears on version mismatch)
+- **Resume capability:** Re-paste URLs to continue after timeout
+- **Cache operations:** getCachedResults(), cacheResults(), clearCache(), getCacheStats()
+- **Merge logic:** Combines cached + new results, recalculates summary statistics
 
 ### Readability Metrics Priority
 1. **Flesch-Kincaid Grade Level** - Primary metric
@@ -170,7 +200,17 @@ After baseline is established:
 
 ## Current Status
 
-**Sprint 1 Complete** ✅ - Core text extraction implemented with TDD.
+**Sprint 6 Complete + Enhancements** ✅ - Dark mode, client-side caching, and smart URL filtering added.
+
+**Latest Update (Post-Sprint 6):**
+- Dark mode with theme toggle and localStorage persistence
+- Client-side caching for timeout recovery (7-day expiry, resume capability)
+- Smart URL filtering (silently skips YouTube, EdPuzzle, Instagram, images, infographics)
+- Fixed summary statistics bugs (NaN success rate, static grade level)
+- Improved URL validation (less aggressive, allows more legitimate articles)
+- Dynamic timeout calculation (15s per URL + buffer, max 30 min)
+- Clear cache button in UI
+- All components have dark mode variants
 
 **Sprint 0 - Foundation (✅ Complete):**
 - Backend project structure with FastAPI, pytest, and all dependencies configured
