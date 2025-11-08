@@ -1,6 +1,7 @@
 """Text extraction service using Trafilatura and readability-lxml"""
 import asyncio
 import logging
+import re
 from typing import Optional, List
 from urllib.parse import urlparse
 
@@ -31,6 +32,129 @@ def validate_url(url: str) -> bool:
         return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
     except Exception:
         return False
+
+
+def clean_extracted_text(text: str) -> str:
+    """
+    Clean extracted text by removing common artifacts and noise.
+
+    Args:
+        text: Raw extracted text
+
+    Returns:
+        Cleaned text with artifacts removed
+    """
+    if not text:
+        return text
+
+    # Remove photo/video credits (AP Photo, Getty Images, etc.)
+    text = re.sub(r'\((?:AP|Getty|Reuters|AFP)\s+(?:Photo|Video|Image)[^)]*\)', '', text)
+
+    # Remove standalone photo credit patterns
+    text = re.sub(r'Photo by:?\s+[^\n]+', '', text)
+    text = re.sub(r'Image credit:?\s+[^\n]+', '', text, flags=re.IGNORECASE)
+
+    # Remove video/audio credits (more comprehensive)
+    text = re.sub(r'\((?:AP\s+)?(?:Video|Production)(?:\s+by)?:?\s+[^)]+\)', '', text, flags=re.IGNORECASE)
+
+    # Remove photo caption sentences - multiple aggressive patterns
+    # Pattern 1: Any sentence with Traveler/Traveller + action + location + date
+    text = re.sub(r'(?:Traveler|Traveller)s?\s+(?:head|walk|stand|wait|move|sit|line)[^.]*?\.', '', text, flags=re.IGNORECASE)
+
+    # Pattern 2: Generic caption pattern - [People/things] [action] [preposition] [location] [date]
+    text = re.sub(r'(?:People|Passengers|Crowd|Staff|Workers)[^.]*?(?:at|in|near)\s+[^.]*?(?:Airport|terminal|checkpoint)[^.]*?\.', '', text, flags=re.IGNORECASE)
+
+    # Pattern 3: Just date/location descriptions
+    text = re.sub(r'[^.]*?(?:Nov\.|Jan\.|Feb\.|Mar\.|Apr\.|May|Jun\.|Jul\.|Aug\.|Sep\.|Oct\.|Dec\.)\s+\d+,\s+2\d{3}[^.]*?\.', '', text, flags=re.IGNORECASE)
+
+    # Pattern 4: Orphaned location/date fragments (from partially removed captions)
+    text = re.sub(r'^\s*\d+,\s+2\d{3}.*$', '', text, flags=re.MULTILINE)
+
+    # Remove "Planes/Aircraft are seen..." captions
+    text = re.sub(r'Planes?\s+(?:are\s+)?seen\s+at[^.]+\.', '', text, flags=re.IGNORECASE)
+
+    # Remove social media share buttons text
+    text = re.sub(r'(?:Share|Tweet|Email|Print)\s+(?:this|on)\s+(?:Facebook|Twitter|LinkedIn|Email)?', '', text, flags=re.IGNORECASE)
+
+    # Remove "Read more" / "Continue reading" links
+    text = re.sub(r'(?:Read more|Continue reading|Click here)[^\n]*', '', text, flags=re.IGNORECASE)
+
+    # Remove advertisement markers
+    text = re.sub(r'(?:Advertisement|ADVERTISEMENT|Sponsored)', '', text)
+
+    # Remove multiple author attribution patterns
+    text = re.sub(r'Associated Press journalists?\s+[^.]+contributed\.?', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'___+', '', text)  # Remove horizontal lines often used before credits
+
+    # Fix common encoding issues
+    text = text.replace('�', "'")  # Replace common apostrophe encoding error
+    text = text.replace('–', '-')  # Replace en-dash
+    text = text.replace('—', '-')  # Replace em-dash
+    text = text.replace('"', '"').replace('"', '"')  # Replace smart quotes
+    text = text.replace(''', "'").replace(''', "'")  # Replace smart apostrophes
+
+    # Remove repeated consecutive lines and paragraphs (more aggressive)
+    lines = text.split('\n')
+    cleaned_lines = []
+    seen_paragraphs = set()
+    prev_line = None
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Skip empty lines that would create more than 2 consecutive blank lines
+        if not stripped:
+            if not cleaned_lines or cleaned_lines[-1].strip():
+                cleaned_lines.append(line)
+            prev_line = None
+            continue
+
+        # Skip exact duplicate consecutive lines
+        if stripped == prev_line:
+            continue
+
+        # Skip duplicate paragraphs (if we've seen this exact paragraph before)
+        if len(stripped) > 50:  # Only check substantial paragraphs
+            if stripped in seen_paragraphs:
+                continue
+            seen_paragraphs.add(stripped)
+
+        cleaned_lines.append(line)
+        prev_line = stripped
+
+    text = '\n'.join(cleaned_lines)
+
+    # Remove excessive whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text)  # Max 2 consecutive newlines
+    text = re.sub(r' {2,}', ' ', text)  # Multiple spaces to single space
+    text = re.sub(r'\t+', ' ', text)  # Tabs to single space
+
+    # Try to detect and remove repeated lead/summary at the start
+    # Often news sites repeat the headline and first few paragraphs
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    if len(paragraphs) > 5:
+        # Check if first few paragraphs appear again later
+        first_three = paragraphs[:3]
+        # Look for the actual article start (where unique content begins)
+        for i in range(3, min(10, len(paragraphs))):
+            # If we find a substantial paragraph that looks like article content
+            # (contains transition words, quotes, or is significantly longer)
+            if len(paragraphs[i]) > 200 and (
+                'said' in paragraphs[i].lower() or
+                '"' in paragraphs[i] or
+                any(word in paragraphs[i].lower() for word in ['however', 'but', 'while', 'though', 'anxious', 'plenty'])
+            ):
+                # Check if this paragraph was already seen in first 3
+                if paragraphs[i] not in first_three:
+                    # Likely found the real article start
+                    # Remove lead paragraphs if they seem repetitive
+                    if any(para in ' '.join(paragraphs[i:]) for para in first_three):
+                        paragraphs = paragraphs[i:]
+                        break
+
+        text = '\n\n'.join(paragraphs)
+
+    return text.strip()
 
 
 def extract_with_trafilatura(
@@ -150,9 +274,10 @@ def extract_text(
     try:
         text = extract_with_trafilatura(url, timeout)
         if text:
+            cleaned_text = clean_extracted_text(text)
             return ExtractionResult(
                 url=url,
-                text=text,
+                text=cleaned_text,
                 success=True,
                 extraction_method="trafilatura"
             )
@@ -167,9 +292,10 @@ def extract_text(
     logger.info(f"Falling back to readability-lxml for {url}")
     text = extract_with_readability(url, timeout)
     if text:
+        cleaned_text = clean_extracted_text(text)
         return ExtractionResult(
             url=url,
-            text=text,
+            text=cleaned_text,
             success=True,
             extraction_method="readability-lxml"
         )
