@@ -10,7 +10,13 @@
       "Bash(npx tailwindcss:*)",
       "Bash(python -m venv:*)",
       "Bash(npm test:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run dev:*)",
+      "Bash(/c/Users/david/AppData/Local/Programs/Python/Python312/python.exe:*)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/uvicorn:*)",
+      "Bash(./venv/Scripts/python:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

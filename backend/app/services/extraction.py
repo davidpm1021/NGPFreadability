@@ -86,6 +86,33 @@ def clean_extracted_text(text: str) -> str:
     text = re.sub(r'Associated Press journalists?\s+[^.]+contributed\.?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'___+', '', text)  # Remove horizontal lines often used before credits
 
+    # Remove navigation menu content (common in blog sites)
+    # Pattern: Lists of category links (Activities, Advocacy, Behavioral Economics, etc.)
+    lines = text.split('\n')
+    filtered_lines = []
+    consecutive_short_lines = 0
+    skip_mode = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Detect navigation menus: 3+ consecutive short lines (< 30 chars, capitalized)
+        if len(stripped) < 30 and stripped and stripped[0].isupper() and not stripped.endswith('.'):
+            consecutive_short_lines += 1
+            if consecutive_short_lines >= 3:
+                skip_mode = True
+            continue
+        elif skip_mode and len(stripped) < 30:
+            # Keep skipping short lines in menu
+            continue
+        else:
+            # Reset when we hit normal content
+            consecutive_short_lines = 0
+            skip_mode = False
+            filtered_lines.append(line)
+
+    text = '\n'.join(filtered_lines)
+
     # Fix common encoding issues
     text = text.replace('�', "'")  # Replace common apostrophe encoding error
     text = text.replace('–', '-')  # Replace en-dash
