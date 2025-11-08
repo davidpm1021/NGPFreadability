@@ -17,6 +17,110 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
+def clean_url(url: str) -> str:
+    """
+    Clean URL by removing trailing punctuation and whitespace.
+
+    Args:
+        url: URL string to clean
+
+    Returns:
+        Cleaned URL string
+    """
+    if not url:
+        return url
+
+    # Strip whitespace
+    url = url.strip()
+
+    # Remove trailing punctuation that might be from markdown/text
+    # Common: ), ], ., ,, ;
+    while url and url[-1] in '()[].,;':
+        url = url[:-1]
+
+    return url
+
+
+def should_skip_url(url: str) -> bool:
+    """
+    Check if URL should be silently skipped (not shown in results).
+
+    Args:
+        url: URL to check
+
+    Returns:
+        True if URL should be skipped, False otherwise
+    """
+    try:
+        parsed = urlparse(url)
+        path = parsed.path.lower()
+
+        # Skip YouTube URLs silently
+        if 'youtube.com' in parsed.netloc or 'youtu.be' in parsed.netloc:
+            return True
+
+        # Skip EdPuzzle URLs silently
+        if 'edpuzzle.com' in parsed.netloc:
+            return True
+
+        # Skip Instagram posts silently
+        if 'instagram.com' in parsed.netloc:
+            return True
+
+        # Skip direct image files
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']
+        if any(path.endswith(ext) for ext in image_extensions):
+            return True
+
+        # Skip infographic/data viz platforms
+        infographic_domains = ['infogram.com', 'datawrapper.de', 'tableau.com']
+        if any(domain in parsed.netloc for domain in infographic_domains):
+            return True
+
+        return False
+
+    except Exception:
+        return False
+
+
+def is_article_url(url: str) -> tuple[bool, str]:
+    """
+    Check if URL is likely an article (not homepage, embed, category page, etc.)
+
+    Args:
+        url: URL to check
+
+    Returns:
+        Tuple of (is_valid, reason_if_invalid)
+    """
+    try:
+        parsed = urlparse(url)
+        path = parsed.path.rstrip('/')
+
+        # Skip video embeds from other platforms
+        if any(platform in parsed.netloc for platform in ['vimeo.com', 'dailymotion.com']):
+            return False, "Video content cannot be analyzed"
+
+        # Skip homepages (URLs with no path or just '/')
+        if not path or path == '':
+            return False, "Homepage URLs cannot be analyzed - please use article URLs"
+
+        # Skip category/archive pages (URLs ending in category names)
+        # Only block if it's JUST the category with nothing after
+        path_segments = [p for p in path.split('/') if p]
+
+        # Very limited category blocking - only obvious ones
+        category_keywords = ['blog', 'category', 'tag', 'archive', 'author', 'topic']
+        if len(path_segments) == 1 and path_segments[0] in category_keywords:
+            return False, "Category/archive pages cannot be analyzed - please use specific article URLs"
+
+        # Allow everything else - let the extraction fail if it's not an article
+        return True, ""
+
+    except Exception as e:
+        return False, f"Invalid URL: {str(e)}"
+
+
 def validate_url(url: str) -> bool:
     """
     Validate that a URL is well-formed and uses HTTP/HTTPS protocol.
@@ -289,12 +393,24 @@ def extract_text(
     Returns:
         ExtractionResult with success status and extracted text
     """
-    # Validate URL first
+    # Clean URL first (remove trailing punctuation)
+    url = clean_url(url)
+
+    # Validate URL format
     if not validate_url(url):
         return ExtractionResult(
             url=url,
             success=False,
             error="Invalid URL format"
+        )
+
+    # Check if URL is likely an article
+    is_valid_article, reason = is_article_url(url)
+    if not is_valid_article:
+        return ExtractionResult(
+            url=url,
+            success=False,
+            error=reason
         )
 
     # Try Trafilatura first

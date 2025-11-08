@@ -16,85 +16,85 @@ const ResultsTable = ({ results }: ResultsTableProps) => {
 
   return (
     <div className="mt-6 overflow-x-auto">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Results</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Results</h2>
 
-      <table className="min-w-full divide-y divide-gray-300">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
-            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
               URL
             </th>
-            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
               Title
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               FK
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               SMOG
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               CL
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               ARI
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               Consensus
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               Words
             </th>
-            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
               Status
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
           {results.map((result, index) => (
             <tr
               key={index}
-              className={result.extraction_success ? '' : 'bg-red-50'}
+              className={result.extraction_success ? '' : 'bg-red-50 dark:bg-red-900/20'}
             >
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
                 <a
                   href={result.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                   title={result.url}
                 >
                   {truncateUrl(result.url)}
                 </a>
               </td>
-              <td className="px-3 py-4 text-sm text-gray-900 max-w-xs truncate">
+              <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
                 {result.title || '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.flesch_kincaid_grade : '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.smog : '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.coleman_liau : '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.ari : '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.consensus : '-'}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                 {result.metrics ? result.metrics.word_count.toLocaleString() : '-'}
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
                 {result.extraction_success ? (
-                  <span className="text-green-600 font-bold" title="Success">
+                  <span className="text-green-600 dark:text-green-400 font-bold" title="Success">
                     ✓
                   </span>
                 ) : (
-                  <span className="text-red-600 font-bold" title={result.error || 'Failed'}>
+                  <span className="text-red-600 dark:text-red-400 font-bold" title={result.error || 'Failed'}>
                     ✗
                   </span>
                 )}

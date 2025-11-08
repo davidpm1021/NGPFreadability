@@ -10,7 +10,7 @@ from app.models.schemas import (
     ArticleAnalysis,
     AnalysisSummary,
 )
-from app.services.extraction import extract_text
+from app.services.extraction import extract_text, should_skip_url, clean_url
 from app.services.readability import analyze_text
 
 logger = logging.getLogger(__name__)
@@ -119,9 +119,20 @@ async def analyze_urls(request: UrlAnalysisRequest) -> BatchAnalysisResponse:
     """
     logger.info(f"Analyzing {len(request.urls)} URLs")
 
+    # Filter out URLs that should be silently skipped (YouTube, EdPuzzle, etc.)
+    urls_to_process = []
+    for url in request.urls:
+        cleaned = clean_url(url)
+        if not should_skip_url(cleaned):
+            urls_to_process.append(cleaned)
+        else:
+            logger.info(f"Silently skipping URL: {cleaned}")
+
+    logger.info(f"Processing {len(urls_to_process)} URLs after filtering")
+
     # Process each URL
     results = []
-    for url in request.urls:
+    for url in urls_to_process:
         result = process_url(url)
         results.append(result)
 
